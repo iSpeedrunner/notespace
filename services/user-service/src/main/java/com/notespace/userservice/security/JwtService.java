@@ -20,11 +20,34 @@ public class JwtService {
                 .subject(email)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 15 * 60 * 1000))
-                .signWith(getSigningKey(secret))
+                .signWith(getSigningKey())
                 .compact();
     }
 
-    private SecretKey getSigningKey(String secret) {
+    public String getEmailFromToken(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
+    }
+
+
+    public boolean isTokenValid(String token) {
+        try{
+            Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token);
+
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(
                 secret.getBytes(StandardCharsets.UTF_8)
         );
