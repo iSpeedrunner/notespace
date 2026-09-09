@@ -4,6 +4,7 @@ import com.notespace.userservice.dto.auth.LoginRequest;
 import com.notespace.userservice.dto.auth.LoginResponse;
 import com.notespace.userservice.dto.auth.RegisterRequest;
 import com.notespace.userservice.dto.auth.UserResponse;
+import com.notespace.userservice.entity.Role;
 import com.notespace.userservice.entity.User;
 import com.notespace.userservice.exception.UserAlreadyExistsException;
 import com.notespace.userservice.repository.AuthRepository;
@@ -36,6 +37,7 @@ public class AuthService {
                 .username(req.username())
                 .email(req.email())
                 .passwordHash(passwordEncoder.encode(req.password()))
+                .role(Role.USER)
                 .build();
 
         User savedUser = authRepository.save(user);
