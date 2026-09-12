@@ -1,9 +1,7 @@
 package com.notespace.userservice.service;
 
-import com.notespace.userservice.dto.auth.LoginRequest;
-import com.notespace.userservice.dto.auth.LoginResponse;
-import com.notespace.userservice.dto.auth.RegisterRequest;
-import com.notespace.userservice.dto.auth.UserResponse;
+import com.notespace.userservice.dto.auth.*;
+import com.notespace.userservice.entity.RefreshToken;
 import com.notespace.userservice.entity.Role;
 import com.notespace.userservice.entity.User;
 import com.notespace.userservice.exception.UserAlreadyExistsException;
@@ -24,6 +22,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public UserResponse register(RegisterRequest req) {
@@ -53,8 +52,26 @@ public class AuthService {
                 )
         );
 
+        User user = authRepository.findByEmail(authentication.getName()).orElseThrow();
+
         String accessToken = jwtService.generateToken(authentication.getName());
 
-        return new LoginResponse(accessToken);
+        RefreshTokenResult refreshTokenResult = refreshTokenService.createRefreshToken(user.getId());
+
+        return new LoginResponse(accessToken,
+                refreshTokenResult.rawToken());
+    }
+
+    public LoginResponse refreshToken (RefreshTokenRequest request) {
+        RefreshToken refreshToken = refreshTokenService.verifyToken(request.refreshToken());
+
+        User user = refreshToken.getUser();
+
+        String accessToken = jwtService.generateToken(user.getEmail());
+
+        return new LoginResponse(
+                accessToken,
+                request.refreshToken()
+        );
     }
 }
