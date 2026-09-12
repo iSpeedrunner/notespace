@@ -16,6 +16,6 @@ public class UserService {
         User user = authRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Користувача не знайдено"));
 
-        return new UserResponse(user.getId(), user.getEmail(), user.getEmail());
+        return new UserResponse(user.getId(), user.getUsername(), user.getEmail());
     }
 }

@@ -1,9 +1,6 @@
 package com.notespace.userservice.controller;
 
-import com.notespace.userservice.dto.auth.LoginRequest;
-import com.notespace.userservice.dto.auth.LoginResponse;
-import com.notespace.userservice.dto.auth.RegisterRequest;
-import com.notespace.userservice.dto.auth.UserResponse;
+import com.notespace.userservice.dto.auth.*;
 import com.notespace.userservice.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -35,5 +32,10 @@ public class AuthController {
         LoginResponse response = authService.login(request);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refreshToken(request));
     }
 }
