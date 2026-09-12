@@ -62,6 +62,10 @@ public class AuthService {
                 refreshTokenResult.rawToken());
     }
 
+    public void logout(String refreshToken) {
+        refreshTokenService.revokeToken(refreshToken);
+    }
+
     public LoginResponse refreshToken (RefreshTokenRequest request) {
         RefreshToken refreshToken = refreshTokenService.verifyToken(request.refreshToken());
 

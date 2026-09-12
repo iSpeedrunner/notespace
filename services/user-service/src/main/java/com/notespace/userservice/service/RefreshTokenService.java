@@ -73,6 +73,15 @@ public class RefreshTokenService {
     }
 
 
+    public void revokeToken(String token) {
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(token)
+                .orElseThrow(() -> new RuntimeException("Token not found"));
+
+        refreshToken.setRevoked(true);
+
+        refreshTokenRepository.save(refreshToken);
+    }
+
     private String hashToken(String token) {
         try {
             MessageDigest digest =
