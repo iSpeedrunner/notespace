@@ -3,10 +3,10 @@ package com.notespace.userservice.service;
 import com.notespace.userservice.dto.auth.RefreshTokenResult;
 import com.notespace.userservice.entity.RefreshToken;
 import com.notespace.userservice.entity.User;
+import com.notespace.userservice.exception.InvalidRefreshTokenException;
 import com.notespace.userservice.repository.AuthRepository;
 import com.notespace.userservice.repository.RefreshTokenRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -58,15 +58,14 @@ public class RefreshTokenService {
         String tokenHash = hashToken(rawToken);
 
         RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() ->
-                        new RuntimeException("Refresh token not found"));
+                .orElseThrow(InvalidRefreshTokenException::new);
 
         if(refreshToken.isRevoked()) {
-            throw new RuntimeException("Refresh token is revoked.");
+            throw new InvalidRefreshTokenException();
         }
 
         if(refreshToken.getExpiresAt().isBefore(Instant.now())) {
-            throw new RuntimeException("Refresh token expired");
+            throw new InvalidRefreshTokenException();
         }
 
         return refreshToken;

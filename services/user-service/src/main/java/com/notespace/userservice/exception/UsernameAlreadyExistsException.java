@@ -1,7 +1,7 @@
 package com.notespace.userservice.exception;
 
-public class UserAlreadyExistsException extends RuntimeException{
-    public UserAlreadyExistsException() {
+public class UsernameAlreadyExistsException extends RuntimeException{
+    public UsernameAlreadyExistsException() {
         super("Username is already taken");
     }
 }

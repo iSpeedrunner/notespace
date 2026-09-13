@@ -4,16 +4,20 @@ import com.notespace.userservice.dto.auth.*;
 import com.notespace.userservice.entity.RefreshToken;
 import com.notespace.userservice.entity.Role;
 import com.notespace.userservice.entity.User;
-import com.notespace.userservice.exception.UserAlreadyExistsException;
+import com.notespace.userservice.exception.InvalidCredentialsException;
+import com.notespace.userservice.exception.UsernameAlreadyExistsException;
 import com.notespace.userservice.repository.AuthRepository;
 import com.notespace.userservice.security.JwtService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Locale;
 
 @Service
 @AllArgsConstructor
@@ -27,10 +31,10 @@ public class AuthService {
     @Transactional
     public UserResponse register(RegisterRequest req) {
         if(authRepository.existsByEmail(req.email()))
-            throw new UserAlreadyExistsException("Користувач з email: '" + req.email() + "' вже існує.");
+            throw new UsernameAlreadyExistsException();
 
         if(authRepository.existsByUsername(req.username()))
-            throw new UserAlreadyExistsException("Ім'я користувача '" + req.username() + "' вже зайняте");
+            throw new UsernameAlreadyExistsException();
 
         User user = User.builder()
                 .username(req.username())
@@ -45,16 +49,23 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
-        );
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        try{
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            email,
+                            request.password()
+                    )
+            );
+        } catch (BadCredentialsException ex) {
+            throw new InvalidCredentialsException();
+        }
 
-        User user = authRepository.findByEmail(authentication.getName()).orElseThrow();
 
-        String accessToken = jwtService.generateToken(authentication.getName());
+        User user = authRepository.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        String accessToken = jwtService.generateToken(email);
 
         RefreshTokenResult refreshTokenResult = refreshTokenService.createRefreshToken(user.getId());
 

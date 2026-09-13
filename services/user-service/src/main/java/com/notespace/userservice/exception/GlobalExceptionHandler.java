@@ -45,4 +45,69 @@ public class GlobalExceptionHandler {
                 .badRequest()
                 .body(response);
     }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException ex, HttpServletRequest request) {
+        return buildError(
+                HttpStatus.CONFLICT,
+                "EMAIL_ALREADY_EXISTS",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(UsernameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleUsernameAlreadyExists(
+            UsernameAlreadyExistsException ex,
+            HttpServletRequest request
+    ) {
+
+        return buildError(
+                HttpStatus.CONFLICT,
+                "USERNAME_ALREADY_EXISTS",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {
+        return buildError(
+                HttpStatus.UNAUTHORIZED,
+                "BAD_CREDENTIALS",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex, HttpServletRequest request) {
+        return buildError(
+                HttpStatus.UNAUTHORIZED,
+                "INVALID_REFRESH_TOKEN",
+                ex.getMessage(),
+                request
+        );
+    }
+
+    private ResponseEntity<ErrorResponse> buildError(
+            HttpStatus status,
+            String error,
+            String message,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponse response = new ErrorResponse(
+                Instant.now(),
+                status.value(),
+                error,
+                message,
+                request.getRequestURI(),
+                null
+        );
+
+        return ResponseEntity
+                .status(status)
+                .body(response);
+    }
 }
