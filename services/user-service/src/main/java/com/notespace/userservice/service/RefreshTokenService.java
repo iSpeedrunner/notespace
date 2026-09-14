@@ -71,6 +71,28 @@ public class RefreshTokenService {
         return refreshToken;
     }
 
+    public RefreshTokenResult rotateRefreshToken(String rawToken) {
+        String hashToken = hashToken(rawToken);
+
+        RefreshToken oldToken = refreshTokenRepository.findByTokenHash(hashToken)
+                .orElseThrow(InvalidRefreshTokenException::new);
+
+        if(oldToken.isRevoked()){
+            throw new InvalidRefreshTokenException();
+        }
+
+        if(oldToken.getExpiresAt().isBefore(Instant.now())) {
+            throw new InvalidRefreshTokenException();
+        }
+
+        oldToken.setRevoked(true);
+
+        refreshTokenRepository.save(oldToken);
+
+        return createRefreshToken(
+                oldToken.getUser().getId()
+        );
+    }
 
     public void revokeToken(String token) {
         String tokenHash = hashToken(token);
