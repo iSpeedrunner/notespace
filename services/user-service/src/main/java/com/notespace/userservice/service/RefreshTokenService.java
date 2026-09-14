@@ -6,6 +6,7 @@ import com.notespace.userservice.entity.User;
 import com.notespace.userservice.exception.InvalidRefreshTokenException;
 import com.notespace.userservice.repository.AuthRepository;
 import com.notespace.userservice.repository.RefreshTokenRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -54,8 +55,7 @@ public class RefreshTokenService {
         return new RefreshTokenResult(savedToken, rawToken);
     }
 
-    public RefreshToken verifyToken(String rawToken) {
-        String tokenHash = hashToken(rawToken);
+    private RefreshToken verifyToken(String tokenHash) {
 
         RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(InvalidRefreshTokenException::new);
@@ -71,19 +71,9 @@ public class RefreshTokenService {
         return refreshToken;
     }
 
+    @Transactional
     public RefreshTokenResult rotateRefreshToken(String rawToken) {
-        String hashToken = hashToken(rawToken);
-
-        RefreshToken oldToken = refreshTokenRepository.findByTokenHash(hashToken)
-                .orElseThrow(InvalidRefreshTokenException::new);
-
-        if(oldToken.isRevoked()){
-            throw new InvalidRefreshTokenException();
-        }
-
-        if(oldToken.getExpiresAt().isBefore(Instant.now())) {
-            throw new InvalidRefreshTokenException();
-        }
+        RefreshToken oldToken = verifyToken(hashToken(rawToken));
 
         oldToken.setRevoked(true);
 
@@ -94,10 +84,11 @@ public class RefreshTokenService {
         );
     }
 
+    @Transactional
     public void revokeToken(String token) {
         String tokenHash = hashToken(token);
         RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new RuntimeException("Token not found"));
+                .orElseThrow(InvalidRefreshTokenException::new);
 
         refreshToken.setRevoked(true);
 
