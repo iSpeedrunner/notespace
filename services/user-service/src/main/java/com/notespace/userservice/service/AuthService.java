@@ -4,6 +4,7 @@ import com.notespace.userservice.dto.auth.*;
 import com.notespace.userservice.entity.RefreshToken;
 import com.notespace.userservice.entity.Role;
 import com.notespace.userservice.entity.User;
+import com.notespace.userservice.exception.EmailAlreadyExistsException;
 import com.notespace.userservice.exception.InvalidCredentialsException;
 import com.notespace.userservice.exception.UsernameAlreadyExistsException;
 import com.notespace.userservice.repository.AuthRepository;
@@ -31,7 +32,7 @@ public class AuthService {
     @Transactional
     public UserResponse register(RegisterRequest req) {
         if(authRepository.existsByEmail(req.email()))
-            throw new UsernameAlreadyExistsException();
+            throw new EmailAlreadyExistsException();
 
         if(authRepository.existsByUsername(req.username()))
             throw new UsernameAlreadyExistsException();
