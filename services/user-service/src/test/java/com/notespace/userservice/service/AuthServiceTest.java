@@ -216,6 +216,64 @@ public class AuthServiceTest {
 
     @Test
     void login_shouldNormalizeEmail_beforeAuthentication() {
+        String inputEmail = " TEST@GMAIL.COM ";
+        String normalizedEmail = "test@gmail.com";
+
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .email(normalizedEmail)
+                .build();
+
+        LoginRequest request = new LoginRequest(inputEmail, "hello123");
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(mock(Authentication.class));
+
+        when(authRepository.findByEmail(normalizedEmail))
+                .thenReturn(Optional.of(user));
+
+        RefreshTokenResult refreshTokenResult = new RefreshTokenResult(
+                mock(RefreshToken.class),
+                "raw-refresh-token"
+        );
+
+        when(refreshTokenService.createRefreshToken(user.getId()))
+                .thenReturn(refreshTokenResult);
+
+        authService.login(request);
+
+        verify(authenticationManager).authenticate(
+                argThat(token -> token.getName().equals(normalizedEmail))
+        );
+    }
+
+    @Test
+    void login_shouldThrowInvalidCredentialsException_whenUserNotFound() {
+        String email = "test@gmail.com";
+        String password = "hello123";
+
+        LoginRequest request = new LoginRequest(email, password);
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(mock(Authentication.class));
+
+        when(authRepository.findByEmail(email))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                InvalidCredentialsException.class,
+                () -> authService.login(request)
+        );
+
+        verify(authenticationManager).authenticate(any());
+        verify(authRepository).findByEmail(email);
+
+        verifyNoInteractions(
+                jwtService,
+                refreshTokenService
+        );
 
     }
+
+
 }
