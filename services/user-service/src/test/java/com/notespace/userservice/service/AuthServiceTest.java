@@ -5,6 +5,7 @@ import com.notespace.userservice.entity.RefreshToken;
 import com.notespace.userservice.entity.User;
 import com.notespace.userservice.exception.EmailAlreadyExistsException;
 import com.notespace.userservice.exception.InvalidCredentialsException;
+import com.notespace.userservice.exception.InvalidRefreshTokenException;
 import com.notespace.userservice.exception.UsernameAlreadyExistsException;
 import com.notespace.userservice.repository.AuthRepository;
 import com.notespace.userservice.security.JwtService;
@@ -146,7 +147,6 @@ public class AuthServiceTest {
         verify(passwordEncoder).encode(request.password());
     }
 
-
     @Test
     void login_ShouldReturnLoginResponse_WhenCredentialsAreValid() {
         String email = "test@gmail.com";
@@ -275,5 +275,63 @@ public class AuthServiceTest {
 
     }
 
+    @Test
+    void logout_ShouldRevokeToken_WhenRefreshTokenIsValid() {
+        String refreshToken = "refresh-token";
 
+        authService.logout(refreshToken);
+
+        verify(refreshTokenService).revokeToken(refreshToken);
+    }
+
+    @Test
+    void refreshToken_ShouldReturnLoginResponse_WhenRefreshTokenIsValid() {
+        String oldRefreshToken = "old-refresh-token";
+        String newRefreshToken = "new-refresh-token";
+        String accessToken = "access-token";
+
+        RefreshTokenRequest request = new RefreshTokenRequest(oldRefreshToken);
+
+        String email = "test@gmail.com";
+
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .email(email)
+                .build();
+
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setUser(user);
+
+        RefreshTokenResult result = new RefreshTokenResult(refreshToken, newRefreshToken);
+
+        when(refreshTokenService.rotateRefreshToken(request.refreshToken()))
+                .thenReturn(result);
+        when(jwtService.generateToken(user.getEmail()))
+                .thenReturn(accessToken);
+
+        LoginResponse response = authService.refreshToken(request);
+
+        assertEquals(accessToken, response.accessToken());
+        assertEquals(newRefreshToken, response.refreshToken());
+
+        verify(refreshTokenService).rotateRefreshToken(oldRefreshToken);
+        verify(jwtService).generateToken(email);
+    }
+
+    @Test
+    void refreshToken_ShouldThrowException_WhenRefreshTokenIsInvalid() {
+        String refreshToken = "invalid_refresh_token";
+
+        RefreshTokenRequest request = new RefreshTokenRequest(refreshToken);
+
+        when(refreshTokenService.rotateRefreshToken(refreshToken))
+                .thenThrow(InvalidRefreshTokenException.class);
+
+        assertThrows(
+                InvalidRefreshTokenException.class,
+                () -> authService.refreshToken(request)
+        );
+
+        verify(jwtService, never()).generateToken(any());
+    }
 }
