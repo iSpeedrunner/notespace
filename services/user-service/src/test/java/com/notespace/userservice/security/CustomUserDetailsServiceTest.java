@@ -39,4 +39,20 @@ class CustomUserDetailsServiceTest {
         assertThrows(UsernameNotFoundException.class,
                 () -> service.loadUserByUsername("missing@example.com"));
     }
+
+    @Test
+    void loadUserByUsername_passesNullEmailToRepository() {
+        when(authRepository.findByEmail(null)).thenReturn(Optional.empty());
+
+        assertThrows(UsernameNotFoundException.class, () -> service.loadUserByUsername(null));
+    }
+
+    @Test
+    void loadUserByUsername_propagatesRepositoryException() {
+        RuntimeException failure = new IllegalStateException("database unavailable");
+        when(authRepository.findByEmail("alice@example.com")).thenThrow(failure);
+
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> service.loadUserByUsername("alice@example.com")));
+    }
 }

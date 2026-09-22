@@ -1,6 +1,7 @@
 package com.notespace.userservice.security;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,5 +64,47 @@ class JwtAuthFilterTest {
 
         assertEquals("alice@example.com", SecurityContextHolder.getContext().getAuthentication().getName());
         assertTrue(SecurityContextHolder.getContext().getAuthentication().isAuthenticated());
+    }
+
+    @Test
+    void filter_passesThroughNonBearerAuthorizationHeader() throws ServletException, IOException {
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Basic credentials");
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request, new MockHttpServletResponse(), chain);
+
+        verify(chain).doFilter(any(), any());
+        verifyNoInteractions(jwtService, userDetailsService);
+    }
+
+    @Test
+    void filter_passesEmptyBearerTokenToJwtValidation() throws ServletException, IOException {
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer ");
+        FilterChain chain = mock(FilterChain.class);
+        when(jwtService.isTokenValid("")).thenReturn(false);
+
+        filter.doFilter(request, new MockHttpServletResponse(), chain);
+
+        verify(jwtService).isTokenValid("");
+        verify(chain).doFilter(any(), any());
+        verifyNoInteractions(userDetailsService);
+    }
+
+    @Test
+    void filter_propagatesUserLookupFailureAndDoesNotContinueChain() throws ServletException, IOException {
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer valid");
+        FilterChain chain = mock(FilterChain.class);
+        RuntimeException failure = new IllegalStateException("user lookup unavailable");
+        when(jwtService.isTokenValid("valid")).thenReturn(true);
+        when(jwtService.getEmailFromToken("valid")).thenReturn("alice@example.com");
+        when(userDetailsService.loadUserByUsername("alice@example.com")).thenThrow(failure);
+
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> filter.doFilter(request, new MockHttpServletResponse(), chain)));
+        verify(chain, never()).doFilter(any(), any());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 }

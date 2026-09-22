@@ -6,6 +6,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -41,5 +46,30 @@ class JwtServiceTest {
     @Test
     void malformedTokenIsInvalid() {
         assertFalse(jwtService.isTokenValid("not-a-jwt"));
+    }
+
+    @Test
+    void expiredTokenIsInvalid() {
+        String token = Jwts.builder()
+                .subject("alice@example.com")
+                .expiration(new Date(0))
+                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                .compact();
+
+        assertFalse(jwtService.isTokenValid(token));
+        assertThrows(Exception.class, () -> jwtService.getEmailFromToken(token));
+    }
+
+    @Test
+    void getEmailFromToken_throwsForNullToken() {
+        assertThrows(Exception.class, () -> jwtService.getEmailFromToken(null));
+        assertFalse(jwtService.isTokenValid(null));
+    }
+
+    @Test
+    void generateToken_rejectsSecretShorterThanHmacRequirement() {
+        ReflectionTestUtils.setField(jwtService, "secret", "too-short");
+
+        assertThrows(Exception.class, () -> jwtService.generateToken("alice@example.com"));
     }
 }
