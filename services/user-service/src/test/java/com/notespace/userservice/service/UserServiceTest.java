@@ -40,4 +40,21 @@ class UserServiceTest {
         assertThrows(UsernameNotFoundException.class,
                 () -> userService.getCurrentUser("missing@example.com"));
     }
+
+    @Test
+    void getCurrentUser_passesNullEmailToRepositoryAndMapsMissingResult() {
+        when(authRepository.findByEmail(null)).thenReturn(Optional.empty());
+
+        assertThrows(UsernameNotFoundException.class, () -> userService.getCurrentUser(null));
+        verify(authRepository).findByEmail(null);
+    }
+
+    @Test
+    void getCurrentUser_propagatesRepositoryException() {
+        RuntimeException failure = new IllegalStateException("database unavailable");
+        when(authRepository.findByEmail("alice@example.com")).thenThrow(failure);
+
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> userService.getCurrentUser("alice@example.com")));
+    }
 }

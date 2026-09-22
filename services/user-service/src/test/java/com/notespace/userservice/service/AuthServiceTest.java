@@ -85,6 +85,9 @@ public class AuthServiceTest {
                 .thenReturn(true);
 
         assertThrows(EmailAlreadyExistsException.class, () -> authService.register(request));
+        verify(authRepository, never()).existsByUsername(anyString());
+        verifyNoInteractions(passwordEncoder);
+        verify(authRepository, never()).save(any());
     }
 
     @Test
@@ -95,6 +98,8 @@ public class AuthServiceTest {
                 .thenReturn(true);
 
         assertThrows(UsernameAlreadyExistsException.class, () -> authService.register(request));
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(authRepository, never()).save(any());
     }
 
     @Test
@@ -145,6 +150,27 @@ public class AuthServiceTest {
         authService.register(request);
 
         verify(passwordEncoder).encode(request.password());
+    }
+
+    @Test
+    void register_shouldPropagateRepositoryException() {
+        RegisterRequest request = new RegisterRequest("alice", "alice@example.com", "password");
+        when(authRepository.existsByEmail(request.email())).thenReturn(false);
+        when(authRepository.existsByUsername(request.username())).thenReturn(false);
+        when(passwordEncoder.encode(request.password())).thenReturn("hash");
+        when(authRepository.save(any(User.class)))
+                .thenThrow(new IllegalStateException("database unavailable"));
+
+        assertThrows(IllegalStateException.class, () -> authService.register(request));
+        verify(passwordEncoder).encode(request.password());
+        verify(authRepository).save(any(User.class));
+    }
+
+    @Test
+    void register_shouldThrowNullPointerExceptionForNullRequestBeforeDependencies() {
+        assertThrows(NullPointerException.class, () -> authService.register(null));
+
+        verifyNoInteractions(authRepository, passwordEncoder);
     }
 
     @Test
@@ -276,12 +302,65 @@ public class AuthServiceTest {
     }
 
     @Test
+    void login_shouldPropagateUnexpectedAuthenticationException() {
+        LoginRequest request = new LoginRequest("alice@example.com", "password");
+        RuntimeException failure = new IllegalStateException("authentication provider unavailable");
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(failure);
+
+        assertSame(failure, assertThrows(IllegalStateException.class, () -> authService.login(request)));
+        verifyNoInteractions(authRepository, jwtService, refreshTokenService);
+    }
+
+    @Test
+    void login_shouldRejectEmptyEmailAfterAuthenticationFailureWithoutOtherDependencies() {
+        LoginRequest request = new LoginRequest("", "password");
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new BadCredentialsException("bad credentials"));
+
+        assertThrows(InvalidCredentialsException.class, () -> authService.login(request));
+        verify(authenticationManager).authenticate(argThat(token -> token.getName().isEmpty()));
+        verifyNoInteractions(authRepository, jwtService, refreshTokenService);
+    }
+
+    @Test
+    void login_shouldNotCreateRefreshTokenWhenJwtGenerationFails() {
+        String email = "alice@example.com";
+        User user = User.builder().id(UUID.randomUUID()).email(email).build();
+        RuntimeException failure = new IllegalStateException("token service unavailable");
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(mock(Authentication.class));
+        when(authRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(email)).thenThrow(failure);
+
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> authService.login(new LoginRequest(email, "password"))));
+        verify(refreshTokenService, never()).createRefreshToken(any());
+    }
+
+    @Test
     void logout_ShouldRevokeToken_WhenRefreshTokenIsValid() {
         String refreshToken = "refresh-token";
 
         authService.logout(refreshToken);
 
         verify(refreshTokenService).revokeToken(refreshToken);
+    }
+
+    @Test
+    void logout_shouldDelegateEmptyTokenWithoutAddingValidation() {
+        authService.logout("");
+
+        verify(refreshTokenService).revokeToken("");
+    }
+
+    @Test
+    void logout_shouldPropagateRefreshTokenServiceException() {
+        RuntimeException failure = new IllegalStateException("storage unavailable");
+        doThrow(failure).when(refreshTokenService).revokeToken("refresh");
+
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> authService.logout("refresh")));
     }
 
     @Test
@@ -333,5 +412,27 @@ public class AuthServiceTest {
         );
 
         verify(jwtService, never()).generateToken(any());
+    }
+
+    @Test
+    void refreshToken_shouldNotGenerateAccessTokenWhenRotationReturnsNull() {
+        when(refreshTokenService.rotateRefreshToken("refresh")).thenReturn(null);
+
+        assertThrows(NullPointerException.class,
+                () -> authService.refreshToken(new RefreshTokenRequest("refresh")));
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void refreshToken_shouldPropagateAccessTokenGenerationFailure() {
+        User user = User.builder().email("alice@example.com").build();
+        RefreshToken refreshToken = RefreshToken.builder().user(user).build();
+        RuntimeException failure = new IllegalStateException("jwt unavailable");
+        when(refreshTokenService.rotateRefreshToken("refresh"))
+                .thenReturn(new RefreshTokenResult(refreshToken, "new-refresh"));
+        when(jwtService.generateToken(user.getEmail())).thenThrow(failure);
+
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> authService.refreshToken(new RefreshTokenRequest("refresh"))));
     }
 }
