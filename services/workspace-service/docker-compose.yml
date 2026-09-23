@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: notespace-workspace-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: workspace_db
+      POSTGRES_USER: workspace_service
+      POSTGRES_PASSWORD: password
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - workspace_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  workspace_postgres_data:

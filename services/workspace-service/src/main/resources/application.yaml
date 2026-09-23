@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: workspace-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/workspace_db
+    username: workspace_service
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+
+server:
+  port: 8082
