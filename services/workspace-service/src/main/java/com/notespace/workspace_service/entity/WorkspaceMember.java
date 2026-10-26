@@ -2,6 +2,7 @@ package com.notespace.workspace_service.entity;
 
 
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -15,8 +16,14 @@ import java.util.UUID;
                 )
         }
 )
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class WorkspaceMember {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne
