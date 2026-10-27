@@ -1,4 +1,11 @@
-# Track project documentation; exclude secrets and local artifacts explicitly.
+# Agent instructions, context, plans and reports (keep local).
+AGENTS.md
+/codex-context-setup.md
+**/docs/context/
+**/docs/superpowers/
+/docs/workspace-service-analysis.md
+
+# Secrets and local artifacts.
 .env
 .env.*
 *.pem
