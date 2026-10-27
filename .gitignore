@@ -1,9 +1,24 @@
-# Documentation files
-**/*.md
-**/*.mdx
-**/*.rst
-**/*.adoc
-
-# Documentation directories
-**/docs/
-**/documentation/
+# Track project documentation; exclude secrets and local artifacts explicitly.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_ed25519
+.aws/
+.codex/
+.agents/
+.superpowers/
+.idea/
+.vscode/
+**/target/
+**/build/
+**/.m2/
+**/node_modules/
+*.log
+*.tmp
+*.bak
