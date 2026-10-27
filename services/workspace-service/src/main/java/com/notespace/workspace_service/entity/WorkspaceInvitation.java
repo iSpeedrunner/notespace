@@ -15,20 +15,27 @@ import java.util.UUID;
 @Builder
 public class WorkspaceInvitation {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "workspace_id", nullable = false)
     private Workspace workspace;
 
+    @Column(nullable = false)
     private UUID inviteeUserId;
 
+    @Column(nullable = false)
     private UUID invitedByUserId;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     private WorkspaceInvitationStatus status;
 
+    @Column(nullable = false)
     private Instant expiresAt;
 
+    @Column(nullable = false)
     private Instant createdAt;
 
     private Instant respondedAt;

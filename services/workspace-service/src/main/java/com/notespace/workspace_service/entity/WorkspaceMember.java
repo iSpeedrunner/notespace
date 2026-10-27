@@ -26,13 +26,17 @@ public class WorkspaceMember {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "workspace_id", nullable = false)
     private Workspace workspace;
 
+    @Column(nullable = false)
     private UUID userId;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     private WorkspaceRole role;
 
+    @Column(nullable = false)
     private Instant joinedAt;
 }

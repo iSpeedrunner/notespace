@@ -18,7 +18,10 @@ public class Workspace {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(nullable = false, length = 100)
     private String name;
+    @Column(nullable = false)
     private Instant createdAt;
+    @Column(nullable = false)
     private Instant updatedAt;
 }

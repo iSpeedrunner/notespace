@@ -37,6 +37,7 @@ public class WorkspaceMemberRepositoryTest {
                 .userId(userId)
                 .workspace(workspace)
                 .role(role)
+                .joinedAt(Instant.now())
                 .build();
     }
 

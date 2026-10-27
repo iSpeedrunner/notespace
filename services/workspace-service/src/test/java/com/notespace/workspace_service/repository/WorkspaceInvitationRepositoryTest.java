@@ -38,7 +38,6 @@ public class WorkspaceInvitationRepositoryTest {
         Instant now = Instant.now();
 
         return WorkspaceInvitation.builder()
-                .id(UUID.randomUUID())
                 .workspace(workspace)
                 .inviteeUserId(UUID.randomUUID())
                 .invitedByUserId(UUID.randomUUID())
